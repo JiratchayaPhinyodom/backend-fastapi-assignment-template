@@ -1,12 +1,23 @@
 from fastapi import FastAPI, HTTPException, Body
-from datetime import date
-from pymongo import MongoClient
+from datetime import date, datetime
 from pydantic import BaseModel
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+import urllib
 
-DATABASE_NAME = "hotel"
+load_dotenv(".env")
+
+user = os.getenv("username")
+password = urllib.parse.quote(os.getenv("password"))
+client = MongoClient(f"mongodb://{user}:{urllib.parse.quote(password)}@mongo.exceed19.online:8443/?authMechanism=DEFAULT")
+
+# DATABASE_NAME = "hotel"
+# COLLECTION_NAME = "reservation"
+DATABASE_NAME = "exceed05"
 COLLECTION_NAME = "reservation"
-MONGO_DB_URL = "mongodb://localhost"
-MONGO_DB_PORT = 27017
+# MONGO_DB_URL = "mongodb://localhost"
+# MONGO_DB_PORT = 27017
 
 
 class Reservation(BaseModel):
@@ -16,7 +27,7 @@ class Reservation(BaseModel):
     room_id: int
 
 
-client = MongoClient(f"{MONGO_DB_URL}:{MONGO_DB_PORT}")
+# client = MongoClient(f"{MONGO_DB_URL}:{MONGO_DB_PORT}")
 
 db = client[DATABASE_NAME]
 
@@ -38,23 +49,45 @@ def room_avaliable(room_id: int, start_date: str, end_date: str):
 
     return not len(list_cursor) > 0
 
+@app.get("/")
+def get_show():
+    return {"name": "Hellotest"}
 
 @app.get("/reservation/by-name/{name}")
 def get_reservation_by_name(name:str):
-    pass
+    return {"result": list(collection.find({"result":name}, {"_id":False}))}
 
 @app.get("/reservation/by-room/{room_id}")
 def get_reservation_by_room(room_id: int):
-    pass
+    if room_id > 0 and room_id <= 10:
+        return {"result":list(collection.find({"result":room_id}, {"_id":False}))}
+    else:
+        raise HTTPException(status_code=400, detail="400 Bad Request.The result was unsuccessful.")
 
 @app.post("/reservation")
 def reserve(reservation : Reservation):
-    pass
+    if reservation.room_id not in range(1, 11) :
+        raise HTTPException(status_code=400)
+    if reservation.start_date > reservation.end_date:
+        raise HTTPException(status_code=400)
+    if not room_avaliable(reservation.room_id, str(reservation.start_date), str(reservation.end_date)):
+        raise HTTPException(status_code=400)
+    collection.insert_one({"name": reservation.name, 
+                           "start_date": reservation.start_date.strftime("%Y-%m-%d"), 
+                           "end_date": reservation.end_date.strftime("%Y-%m-%d"), 
+                           "room_id": reservation.room_id})
 
 @app.put("/reservation/update")
 def update_reservation(reservation: Reservation, new_start_date: date = Body(), new_end_date: date = Body()):
-    pass
+    if new_start_date > new_end_date:
+        raise HTTPException(400)
+    if not room_avaliable(reservation.room_id, str(new_start_date), str(new_end_date)):
+        raise HTTPException(400)
+    collection.update_one({"name": reservation.name,
+                           "room_id": reservation.room_id},
+                          update={"$set": {"start_date": new_start_date.isoformat(),
+                                           "end_date": new_end_date.isoformat()}})
 
 @app.delete("/reservation/delete")
 def cancel_reservation(reservation: Reservation):
-    pass
+    collection.delete_one({"name":reservation.name})

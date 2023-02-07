@@ -8,13 +8,22 @@ import requests
 IP = "127.0.0.1"       # default: 127.0.0.1
 PORT = "8000"          # default: 8000
 
-DATABASE_NAME = "hotel"
+# DATABASE_NAME = "hotel"
+DATABASE_NAME = "exceed05"
 COLLECTION_NAME = "reservation"
-MONGO_DB_URL = f"mongodb://localhost"   # mongodb://localhost
-MONGO_DB_PORT = 27017                   # 27017      
+# MONGO_DB_URL = f"mongodb://localhost"   # mongodb://localhost
+# MONGO_DB_PORT = 27017                   # 27017      
 
 BASE_URL = f"http://{IP}:{PORT}"
 
+from dotenv import load_dotenv
+import os
+import urllib
+
+load_dotenv(".env")
+
+user = os.getenv("username")
+password = urllib.parse.quote(os.getenv("password"))
 
 # Mocking
 mock_name = "JohnDoe"
@@ -22,7 +31,8 @@ mock_name1 = "John Doe"
 
 
 def connect_mongodb():
-    client = MongoClient(f"{MONGO_DB_URL}:{MONGO_DB_PORT}")
+    client = MongoClient(f"mongodb://{user}:{urllib.parse.quote(password)}@mongo.exceed19.online:8443/?authMechanism=DEFAULT")
+    # client = MongoClient(f"{MONGO_DB_URL}:{MONGO_DB_PORT}")
     global db; db = client[DATABASE_NAME]
     global collection; collection = db[COLLECTION_NAME]
 
